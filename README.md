@@ -21,99 +21,71 @@
 
 ## 📋 About The Project
 
-Struggling to provide complete context to AI models like **GPT-4** or **Claude** about your codebase? Pasting files one-by-one is tedious, and you often hit token limits or include irrelevant "noise" like `node_modules` or `bin` folders.
+Struggling to provide complete context to AI models like **GPT-4**, **Gemini** or **Claude** about your codebase? Pasting files one-by-one is tedious, and you often hit token limits or include irrelevant "noise" like `node_modules` or `bin` folders.
 
 **Project Context Scraper** is the solution. This simple GUI tool scans your entire project, intelligently filters out everything you don't need, and generates a single, clean `.txt` file. This file contains your directory structure and all essential source code, perfectly formatted to be used as a prompt.
 
 Just copy, paste, and ask your question. Get better, more accurate help from your AI assistant in seconds.
 
-### ✨ Key Features
-
-*   **Simple & Intuitive GUI:** Built with Python's native `tkinter` library for a lightweight experience.
-*   **Intelligent 3-Category Filtering:** Automatically categorizes files to:
-    1.  **Include Full Content:** Essential source code (`.cs`, `.py`, `.js`, `.html`, etc.).
-    2.  **Show Path Only:** Files where location matters but content doesn't (`.db`, `.sln`, `.png`).
-    3.  **Ignore Completely:** Useless "noise" like `bin/`, `obj/`, `.git/`, and library folders.
-*   **Highly Customizable:** Easily edit the `CONFIGURATION` section in the script to add your own rules.
-*   **Clean & Comprehensive Output:** Generates a single `.txt` file with the project name, a clean directory tree, and all relevant file contents, clearly separated.
-*   **One-Click Actions:** After generating, instantly **Save to File** or **Copy to Clipboard**.
-*   **Standalone Executable:** Build a single `.exe` file with PyInstaller to run anywhere on Windows, no Python installation required.
-
 ---
 
 ## 🚀 Getting Started
 
-Follow these simple steps to get the application running.
+There are two ways to use this application: downloading the ready-to-use version or running from the source code.
 
-### Prerequisites
+### Option 1: Download (Recommended)
 
-You need Python 3.6 or higher installed on your system.
-*   [Download Python](https://www.python.org/downloads/)
+1.  Go to the **[Releases Page](https://github.com/SahilAmirov/project-prompt/releases)**.
+2.  Download the latest `.zip` file (e.g., `Project.Context.Scraper.v1.0.zip`).
+3.  Extract the archive to a folder on your computer.
+4.  Double-click `Project Scanner.exe` to run. No installation needed!
 
-### Installation & Running
+### Option 2: Run from Source
 
-1.  Clone the repository:
+If you have Python installed and want to run the script directly:
+
+1.  **Prerequisites:** Ensure you have [Python 3.6+](https://www.python.org/downloads/) on your system.
+2.  **Clone the repository:**
     ```sh
     git clone https://github.com/SahilAmirov/project-prompt.git
     ```
-2.  Navigate to the project directory:
+3.  **Navigate to the directory:**
     ```sh
     cd project-prompt
     ```
-3.  Run the application:
+4.  **Run the application:**
     ```sh
     python project_scanner.py
     ```
 
 ---
 
-## 🛠️ Building the Executable (Optional)
-
-Create a standalone `.exe` file that can be run on any Windows machine.
-
-1.  Install PyInstaller:
-    ```sh
-    pip install pyinstaller
-    ```
-2.  Run the build command from the project directory (make sure `fav.ico` is present):
-    ```bash
-    pyinstaller --onefile --windowed --icon="fav.ico" --add-data "fav.ico;." project_scanner.py
-    ```
-    *   `--onefile`: Bundles everything into a single executable.
-    *   `--windowed`: Prevents the console window from appearing on run.
-    *   `--icon="fav.ico"`: Sets the icon for the `.exe` file itself.
-    *   `--add-data "fav.ico;."`: **Crucially**, this embeds the icon file inside the `.exe` so the application window can use it at runtime.
-
-3.  Your `project_scanner.exe` will be in the new `dist` folder.
-
----
-
 ## 📖 Usage
 
-1.  **Launch the App:** Run `project_scanner.py` or the built `project_scanner.exe`.
+1.  **Launch the app** by running `Project Scanner.exe` or the Python script.
 2.  **Select Folder:** Click **"Browse..."** or paste the full path to your project's root directory.
 3.  **Generate:** The **"Generate Summary"** button will activate. Click it.
 4.  **Wait:** The status bar will show the progress of the scan.
 5.  **Choose Action:**
-    *   **Save to File:** Saves the summary as `[ProjectName]_summary.txt`. If run from the `.exe`, it will be inside a `project-prompts` folder.
+    *   **Save to File:** Saves the complete summary as `[ProjectName]_summary.txt`.
     *   **Copy to Clipboard:** Copies the entire summary text, ready to be pasted.
 6.  **Start Over:** Click **"Start Over"** to scan a new project.
 
 ---
 
-## ⚙️ Customization
+## ✨ Key Features
 
-The core strength of this tool is its filter lists. You can easily customize them by editing the `CONFIGURATION` block at the top of `project_scanner.py`:
-
-*   **`CAT3_...` lists:** Add any directory, file, extension, or pattern you want to **completely ignore**.
-*   **`CAT2_...` lists:** Add file types where the **path is important** but the content is not.
-*   Everything else is automatically treated as **Category 1** (full content included).
+*   **Simple GUI:** Lightweight and intuitive user experience.
+*   **Intelligent 3-Category Filtering:** Automatically categorizes files to include content, show path only, or ignore completely.
+*   **Highly Customizable:** Easily edit the script's `CONFIGURATION` section to add your own rules.
+*   **Clean & Comprehensive Output:** Generates a single `.txt` file with project name, a clean directory tree, and all relevant file contents.
+*   **Portable Executable:** No installation required for the downloaded version.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions make the open-source community an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 
@@ -128,7 +100,6 @@ If you have a suggestion that would make this better, please fork the repo and c
 ## 📜 License
 
 Distributed under the MIT License. See `LICENSE.txt` for more information.
-
 ---
 
 ## 📧 Contact
