@@ -1,8 +1,8 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/SahilAmirov/project-prompt/refs/heads/main/fav.ico" alt="Project Logo" width="120" height="120">
-  <h1 align="center">Project Context Scraper</h1>
+  <h1 align="center">Project to Prompt</h1>
   <p align="center">
-    Quickly generate a clean, consolidated context file from your entire project to get better help from Large Language Models (LLMs) like GPT-4 and Claude.
+    Quickly generate a clean, consolidated context file from your entire project to get better help from Large Language Models (LLMs) like GPT-4, Gemini, Claude, etc.
     <br />
     <br />
     <a href="https://github.com/SahilAmirov/project-prompt/issues">Report a Bug</a>
@@ -21,7 +21,7 @@
 
 ## 📋 About The Project
 
-Struggling to provide complete context to AI models like **GPT-4**, **Gemini** or **Claude** about your codebase? Pasting files one-by-one is tedious, and you often hit token limits or include irrelevant "noise" like `node_modules` or `bin` folders.
+Struggling to provide complete context to AI models like **GPT-4**, **Gemini**, **Claude**, etc about your codebase? Pasting files one-by-one is tedious, and you often hit token limits or include irrelevant "noise" like `node_modules` or `bin` folders.
 
 **Project Context Scraper** is the solution. This simple GUI tool scans your entire project, intelligently filters out everything you don't need, and generates a single, clean `.txt` file. This file contains your directory structure and all essential source code, perfectly formatted to be used as a prompt.
 
