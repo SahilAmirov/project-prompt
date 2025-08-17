@@ -9,16 +9,16 @@ from tkinter import filedialog, messagebox, PhotoImage
 # ===============================================================
 CAT3_IGNORE_DIRS = {
     '.git', '.idea', 'venv', 'env', '.env', 'node_modules', '__pycache__',
-    '.github', '.vs', 'bin', 'obj', 'Properties',
+    '.github', '.vs', 'bin', 'obj', 'Properties','build','dist',
 }
 CAT3_IGNORE_FILENAMES = {
     '.gitignore', '.gitattributes', 'libman.json',
 }
 CAT3_IGNORE_EXTENSIONS = {
-    '.dll', '.exe', '.pdb', '.cache', '.suo', '.user', '.sln.dotsettings',
+    '.dll', '.exe', '.pdb','db', '.cache', '.suo', '.user', '.sln.dotsettings',
     '.log', '.tmp', '.bak', '.zip', '.rar', '.7z', '.gz', '.br', '.vsidx',
     '.pyc', '.pyd', '.o', '.so', '.a', '.lib', '.class', '.bin', '.map',
-    '.db-shm', '.db-wal',
+    '.db-shm', '.db-wal','spec',
 }
 CAT3_IGNORE_PATTERNS = {
     '.min.js', '.min.css',
