@@ -1,0 +1,50 @@
+{
+  "comment": "Configuration for Project Context Scraper. Category 3 = Ignore, Category 2 = Path Only.",
+  "ignore_dirs": [
+    ".git", ".idea", ".vscode", ".vs", ".github", ".gitlab", ".hg", ".svn",
+    "node_modules", "bower_components", "jspm_packages",
+    "venv", ".venv", "env", ".env", "virtualenv",
+    "bin", "obj", "build", "dist", "out", "target",
+    "__pycache__", ".pytest_cache", ".mypy_cache", ".tox",
+    "cov", "coverage", ".nyc_output",
+    "logs", ".log", "tmp", "temp",
+    "lib", "libs", "vendor", "deploy", "wheels",
+    "android", "ios", ".gradle",
+    "pkg", "bundle"
+  ],
+  "ignore_filenames": [
+    ".gitignore", ".gitattributes", ".dockerignore", ".editorconfig",
+    "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "composer.lock", "Cargo.lock", "Gemfile.lock",
+    "libman.json", "app.publish", "thumbs.db", ".DS_Store"
+  ],
+  "ignore_extensions": [
+    ".exe", ".dll", ".so", ".dylib", ".bin", ".o", ".a", ".lib", ".obj",
+    ".pyc", ".pyd", ".pyo",
+    ".jar", ".war", ".ear", ".class",
+    ".suo", ".user", ".sln.dotsettings", ".pdb", ".idb",
+    ".zip", ".tar", ".gz", ".7z", ".rar", ".iso", ".img",
+    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".bmp", ".tiff", ".webp",
+    ".mp3", ".wav", ".mp4", ".avi", ".mov", ".mkv",
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".db", ".sqlite", ".sqlite3", ".mdb", ".accdb",
+    ".min.js", ".min.css", ".map",
+    ".log", ".bak", ".tmp", ".swp", ".swo"
+  ],
+  "ignore_patterns": [
+    ".min.",
+    ".Designer.cs", ".g.cs", ".g.i.cs", ".generated.cs",
+    "jquery", "bootstrap", "angular", "react", "vue",
+    "webpack.bundle"
+  ],
+  "path_only_extensions": [
+    ".sln", ".csproj", ".vbproj", ".fsproj",
+    ".svg",
+    ".json", ".xml", ".yaml", ".yml", ".toml", ".ini",
+    ".md", ".txt",
+    "LICENSE"
+  ],
+  "path_only_filenames": [
+    "README.md", "LICENSE", "LICENSE.txt", "CHANGELOG.md",
+    "requirements.txt", "package.json", "tsconfig.json", "go.mod", "pom.xml", "build.gradle"
+  ]
+}

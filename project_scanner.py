@@ -1,320 +1,433 @@
 import os
 import sys
+import json
 import tkinter as tk
-from tkinter import filedialog, messagebox, PhotoImage
+from tkinter import filedialog, messagebox
 
-# --- CONFIGURATION (Final) ---
+# --- CONSTANTS & DEFAULTS ---
+SETTINGS_FILENAME = "settings.json"
 
-# CATEGORY 3: IGNORE COMPLETELY (Neither in tree nor in content)
-# ===============================================================
-CAT3_IGNORE_DIRS = {
-    '.git', '.idea', 'venv', 'env', '.env', 'node_modules', '__pycache__',
-    '.github', '.vs', 'bin', 'obj', 'Properties','build','dist',
-}
-CAT3_IGNORE_FILENAMES = {
-    '.gitignore', '.gitattributes', 'libman.json',
-}
-CAT3_IGNORE_EXTENSIONS = {
-    '.dll', '.exe', '.pdb','db', '.cache', '.suo', '.user', '.sln.dotsettings',
-    '.log', '.tmp', '.bak', '.zip', '.rar', '.7z', '.gz', '.br', '.vsidx',
-    '.pyc', '.pyd', '.o', '.so', '.a', '.lib', '.class', '.bin', '.map',
-    '.db-shm', '.db-wal','spec',
-}
-CAT3_IGNORE_PATTERNS = {
-    '.min.js', '.min.css',
-    '.Designer.cs', '.g.cs', '.g.props', '.g.targets', '.resources.dll',
-    'ModelSnapshot.cs', '.csproj.user', 'project.assets.json',
-    'project.nuget.cache', 'launchSettings.json',
-}
-CAT3_IGNORE_PATHS = {
-    os.path.join('wwwroot', 'lib'),
-    os.path.join('wwwroot', 'vendor'),
-}
-
-# CATEGORY 2: PATH ONLY (Show in tree, but skip content)
-# ===============================================================
-CAT2_PATH_ONLY_EXTENSIONS = {
-    '.sln', '.db', '.sqlite', '.sqlite3', '.svg', '.ico', '.png', '.jpg',
-    'LICENSE', 'LICENSE.txt' # Common license files
+# Default configuration serves as a fallback and strictly mimics the JSON structure
+DEFAULT_CONFIG = {
+    "ignore_dirs": [
+        ".git", ".idea", ".vscode", "venv", "env", "node_modules", 
+        "__pycache__", "bin", "obj", "build", "dist", "target", ".vs"
+    ],
+    "ignore_filenames": [
+        ".gitignore", ".gitattributes", "package-lock.json", "yarn.lock"
+    ],
+    "ignore_extensions": [
+        ".dll", ".exe", ".pdb", ".db", ".log", ".tmp", ".zip", ".rar", 
+        ".pyc", ".class", ".o", ".so", ".a", ".lib", 
+        ".png", ".jpg", ".jpeg", ".gif", ".ico", ".mp4"
+    ],
+    "ignore_patterns": [
+        ".min.js", ".min.css", ".Designer.cs", ".g.cs"
+    ],
+    "path_only_extensions": [
+        ".sln", ".svg", ".lock"
+    ],
+    "path_only_filenames": [
+        "LICENSE", "README.md"
+    ]
 }
 
-# --- CORE LOGIC (Completely Revised) ---
+# --- CONFIGURATION MANAGER ---
+
+class ConfigManager:
+    """Handles loading and saving of the scanning rules."""
+    
+    def __init__(self):
+        self.config = DEFAULT_CONFIG
+        self.load_settings()
+
+    def load_settings(self):
+        """Loads settings from JSON file or creates it if missing."""
+        if not os.path.exists(SETTINGS_FILENAME):
+            self._create_default_settings()
+        else:
+            try:
+                with open(SETTINGS_FILENAME, 'r', encoding='utf-8') as f:
+                    loaded_config = json.load(f)
+                    # Merge loaded config with defaults to ensure all keys exist
+                    for key in DEFAULT_CONFIG:
+                        if key not in loaded_config:
+                            loaded_config[key] = DEFAULT_CONFIG[key]
+                    self.config = loaded_config
+            except Exception as e:
+                print(f"Error loading settings.json: {e}. Using defaults.")
+                self.config = DEFAULT_CONFIG
+
+    def _create_default_settings(self):
+        """Creates the settings.json file with default values."""
+        try:
+            with open(SETTINGS_FILENAME, 'w', encoding='utf-8') as f:
+                json.dump(DEFAULT_CONFIG, f, indent=2)
+        except Exception as e:
+            print(f"Could not create default settings file: {e}")
+
+    # Helper methods to access sets for O(1) lookups
+    @property
+    def ignore_dirs(self): return set(self.config.get('ignore_dirs', []))
+    @property
+    def ignore_files(self): return set(self.config.get('ignore_filenames', []))
+    @property
+    def ignore_exts(self): return set(self.config.get('ignore_extensions', []))
+    @property
+    def ignore_patterns(self): return set(self.config.get('ignore_patterns', []))
+    @property
+    def path_only_exts(self): return set(self.config.get('path_only_extensions', []))
+    @property
+    def path_only_files(self): return set(self.config.get('path_only_filenames', []))
+
+
+# Initialize Config globally
+files_config = ConfigManager()
+
+
+# --- CORE LOGIC ---
 
 def get_file_category(relative_path):
-    """Determines the category of a file or directory based on the rules."""
+    """
+    Determines the category of a file or directory.
+    Returns:
+        3: Ignore Completely
+        2: Path Only (Tree view only)
+        1: Content (Tree + File Content)
+    """
     normalized_path = os.path.normpath(relative_path)
     filename = os.path.basename(normalized_path)
     
-    # HACK FIX for wwwroot/lib exclusion
-    if 'wwwroot' in normalized_path and 'lib' in normalized_path.split(os.sep):
+    # 1. Check Directories (Highest Priority)
+    # Check if any part of the path is in the ignore list
+    path_parts = normalized_path.split(os.sep)
+    
+    # Skip hidden folders (starting with .) except current dir '.'
+    for part in path_parts:
+        if part.startswith('.') and part != '.' and len(part) > 1:
+            # Exception: we might want some .config folders, but usually hidden folders are config/cache
+            # For strictness, if it's in the explicit ignore list, it's gone.
+            pass 
+
+    # Check explicit directory ignores
+    for part in path_parts:
+        if part in files_config.ignore_dirs:
+            return 3
+
+    # 2. Check Filenames
+    if filename in files_config.ignore_files:
         return 3
-    
-    # Category 3 (Ignore Completely) has the highest priority
-    if normalized_path in CAT3_IGNORE_PATHS: return 3
-    for excluded_path in CAT3_IGNORE_PATHS:
-        if normalized_path.startswith(excluded_path + os.sep):
-            return 3
 
-    # Skip any hidden folders (e.g., .templates, .git)
-    for part in normalized_path.split(os.sep):
-        if part.startswith('.') and part != '.':
-            return 3
-            
-    for dir_part in normalized_path.split(os.sep):
-        if dir_part in CAT3_IGNORE_DIRS:
-            return 3
-
-    if filename in CAT3_IGNORE_FILENAMES: return 3
-            
-    _ , ext = os.path.splitext(filename)
+    # 3. Check Extensions
+    _, ext = os.path.splitext(filename)
     ext = ext.lower()
+    
+    if ext in files_config.ignore_exts:
+        return 3
 
-    if ext in CAT3_IGNORE_EXTENSIONS: return 3
-    for pattern in CAT3_IGNORE_PATTERNS:
-        if filename.endswith(pattern):
+    # 4. Check Patterns (Substring matching)
+    for pattern in files_config.ignore_patterns:
+        if pattern.lower() in filename.lower():
             return 3
 
-    # Category 2 (Path Only)
-    if ext in CAT2_PATH_ONLY_EXTENSIONS: return 2
-    if filename in CAT2_PATH_ONLY_EXTENSIONS: return 2
-    
-    return 1 # Category 1 (Path & Content)
+    # 5. Check Category 2 (Path Only)
+    if ext in files_config.path_only_exts:
+        return 2
+    if filename in files_config.path_only_files:
+        return 2
+        
+    # Default to Category 1 (Include Content)
+    return 1
 
 def create_directory_tree(start_path):
-    """Creates a clean string representation of the project's directory tree."""
+    """Generates the visual directory tree string."""
     tree_lines = []
+    
     for root, dirs, files in os.walk(start_path, topdown=True):
         relative_root = os.path.relpath(root, start=start_path)
         if relative_root == ".": relative_root = ""
         
-        # **THE CRITICAL FIX**: If the current directory path itself is excluded,
-        # tell os.walk to not go into its subdirectories and skip the rest of the loop.
-        if get_file_category(relative_root) == 3:
-            dirs[:] = []
+        # Check if the current directory is excluded
+        if relative_root and get_file_category(relative_root) == 3:
+            dirs[:] = [] # Stop descending
             continue
 
-        # Filter subdirectories before os.walk visits them
+        # Filter subdirectories in-place so os.walk doesn't visit them
         dirs[:] = [d for d in dirs if get_file_category(os.path.join(relative_root, d)) != 3]
         
         level = relative_root.count(os.sep) if relative_root else 0
         indent = ' ' * 4 * level
+        
         if relative_root:
             tree_lines.append(f"{indent}├── {os.path.basename(root)}/")
         
         sub_indent = ' ' * 4 * (level + 1)
-        filtered_files = sorted([f for f in files if get_file_category(os.path.join(relative_root, f)) != 3])
-        for f in filtered_files:
+        
+        # Filter and sort files
+        valid_files = []
+        for f in files:
+            cat = get_file_category(os.path.join(relative_root, f))
+            if cat != 3:
+                valid_files.append(f)
+        
+        for f in sorted(valid_files):
             tree_lines.append(f"{sub_indent}├── {f}")
             
     return "\n".join(tree_lines)
 
-def generate_project_summary(project_path, status_update_callback):
-    """Scans the project using the 3-category system and returns a summary string."""
+def is_binary_file(file_path):
+    """Heuristic to check if a file is binary."""
+    try:
+        with open(file_path, 'rb') as f:
+            chunk = f.read(1024)
+            return b'\x00' in chunk
+    except Exception:
+        return True
+
+def generate_project_summary(project_path, status_callback):
+    """Main function to scan project and generate string output."""
     all_contents = []
     
-    status_update_callback("Generating clean directory structure...")
+    # Reload config just in case user edited it while app was open
+    files_config.load_settings()
+    
+    status_callback("Generating directory structure...")
     try:
         tree = create_directory_tree(project_path)
     except Exception as e:
-        messagebox.showerror("Error", f"Failed to create directory tree: {e}")
+        messagebox.showerror("Error", f"Failed to scan directory: {e}")
         return None
 
-    status_update_callback("Scanning files and reading relevant content...")
+    status_callback("Reading file contents...")
     
     file_count = 0
+    
     for root, dirs, files in os.walk(project_path, topdown=True):
         relative_root = os.path.relpath(root, start=project_path)
         if relative_root == ".": relative_root = ""
         
-        # **THE CRITICAL FIX**: Also applied here to prevent processing files
-        # in an excluded directory path.
-        if get_file_category(relative_root) == 3:
+        # Skip excluded directories
+        if relative_root and get_file_category(relative_root) == 3:
             dirs[:] = []
             continue
 
-        # Filter subdirectories before os.walk visits them
+        # Filter subdirectories
         dirs[:] = [d for d in dirs if get_file_category(os.path.join(relative_root, d)) != 3]
 
         for file in sorted(files):
             relative_path = os.path.join(relative_root, file)
             category = get_file_category(relative_path)
 
-            if category == 3: continue
+            if category != 1: 
+                continue # Skip Ignore (3) and Path Only (2) for content reading
 
+            file_path = os.path.join(root, file)
             file_count += 1
-            status_update_callback(f"Processing file {file_count}: {relative_path.replace(os.sep, '/')}")
+            status_callback(f"Reading: {file}")
             
-            if category == 1:
-                file_path = os.path.join(root, file)
-                content_header = f"--- FILE: {relative_path.replace(os.sep, '/')} ---\n\n"
-                file_content = ""
+            header = f"--- FILE: {relative_path.replace(os.sep, '/')} ---\n"
+            
+            content = ""
+            if is_binary_file(file_path):
+                content = "[Binary File - Content Skipped]"
+            else:
                 try:
-                    with open(file_path, 'rb') as f_check:
-                        chunk = f_check.read(1024)
-                        if b'\x00' in chunk:
-                            file_content = "!!! SKIPPED: File appears to be binary. !!!"
-                        else:
-                            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                                file_content = f.read()
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                        # Simple check for very large files to prevent freezing
+                        if len(content) > 500000: 
+                            content = f"[File too large ({len(content)} chars) - Truncated]\n" + content[:5000] + "\n...[Truncated]..."
                 except Exception as e:
-                    file_content = f"!!! ERROR: Could not read file. Reason: {e} !!!"
-                all_contents.append(content_header + file_content)
+                    content = f"[Error reading file: {e}]"
             
-    status_update_callback("Finalizing summary...")
+            all_contents.append(f"{header}\n{content}\n")
+            
+    status_callback("Finalizing output...")
     
-    project_name = os.path.basename(project_path.rstrip('/\\'))
-    final_output = f"PROJECT NAME: {project_name}\n"
-    final_output += "=" * 80 + "\n\n"
-    final_output += "DIRECTORY STRUCTURE:\n"
-    final_output += "-" * 80 + "\n"
-    final_output += f"{project_name}/\n{tree}\n"
-    final_output += "\n" + "=" * 80 + "\n\n"
-    final_output += "FILE CONTENTS:\n"
-    final_output += "-" * 80 + "\n\n"
-    final_output += "\n\n".join(all_contents)
+    project_name = os.path.basename(project_path.rstrip(os.sep))
     
-    return final_output
+    output = []
+    output.append(f"PROJECT NAME: {project_name}")
+    output.append("=" * 80)
+    output.append("DIRECTORY STRUCTURE:")
+    output.append("-" * 80)
+    output.append(f"{project_name}/")
+    output.append(tree)
+    output.append("\n" + "=" * 80)
+    output.append("FILE CONTENTS:")
+    output.append("-" * 80)
+    output.append("\n".join(all_contents))
+    
+    return "\n".join(output)
 
-# --- GUI CLASS (No changes needed) ---
+# --- GUI CLASS ---
+
 class ProjectScannerApp:
     def __init__(self, master):
         self.master = master
-        master.title("Project Scanner (by SahilAmirov)")
-        master.geometry("550x300")
+        master.title("Project to Prompt (JSON Config)")
+        master.geometry("600x350")
+        
+        # Styles / Fonts
+        self.font_bold = ('Segoe UI', 10, 'bold')
+        self.font_norm = ('Segoe UI', 9)
+
+        # Variables
         self.project_path = tk.StringVar()
         self.summary_text = None
         self.output_path = None
-        input_frame = tk.Frame(master)
+
+        # UI Layout
+        self.build_ui()
+        
+        # Initial check
+        self.validate_path_entry()
+
+    def build_ui(self):
+        # Input Frame
+        input_frame = tk.LabelFrame(self.master, text="Project Source", padx=10, pady=10)
         input_frame.pack(pady=10, padx=10, fill=tk.X)
-        self.label = tk.Label(input_frame, text="Select or paste the project folder path:")
-        self.label.pack(anchor=tk.W)
-        self.path_entry = tk.Entry(input_frame, textvariable=self.project_path, width=70)
-        self.path_entry.pack(side=tk.LEFT, expand=True, fill=tk.X, ipady=2)
+        
+        tk.Label(input_frame, text="Select root folder:", font=self.font_norm).pack(anchor=tk.W)
+        
+        entry_frame = tk.Frame(input_frame)
+        entry_frame.pack(fill=tk.X, pady=5)
+        
+        self.path_entry = tk.Entry(entry_frame, textvariable=self.project_path, width=60)
+        self.path_entry.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 5))
         self.path_entry.bind("<KeyRelease>", self.validate_path_entry)
-        self.browse_button = tk.Button(input_frame, text="Browse...", command=self.select_folder)
-        self.browse_button.pack(side=tk.RIGHT, padx=(5, 0))
-        self.action_frame = tk.Frame(master)
-        self.action_frame.pack(pady=20)
-        self.start_button = tk.Button(self.action_frame, text="Generate Summary", command=self.process_project, state='disabled', font=('Helvetica', 10, 'bold'))
-        self.start_button.pack()
-        self.save_button = tk.Button(self.action_frame, text="Save to File", command=self.save_summary_to_file)
-        self.copy_button = tk.Button(self.action_frame, text="Copy to Clipboard", command=self.copy_summary_to_clipboard)
-        self.reset_button = tk.Button(master, text="Start Over", command=self.reset_ui)
-        self.status_label = tk.Label(master, text="Ready. Using final filtering logic.", bd=1, relief=tk.SUNKEN, anchor=tk.W)
-        self.status_label.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        self.browse_button = tk.Button(entry_frame, text="Browse...", command=self.select_folder)
+        self.browse_button.pack(side=tk.RIGHT)
+
+        # Config Info
+        lbl_config = tk.Label(input_frame, text=f"Config: Loaded from {SETTINGS_FILENAME}", fg="gray", font=("Segoe UI", 8))
+        lbl_config.pack(anchor=tk.W)
+
+        # Action Frame
+        self.action_frame = tk.Frame(self.master)
+        self.action_frame.pack(pady=10)
+        
+        self.start_button = tk.Button(self.action_frame, text="GENERATE CONTEXT", 
+                                      command=self.process_project, 
+                                      font=self.font_bold, bg="#e1e1e1", state='disabled')
+        self.start_button.pack(pady=5, ipadx=10, ipady=5)
+
+        # Post-Action Buttons (Hidden initially)
+        self.post_action_frame = tk.Frame(self.master)
+        
+        self.save_button = tk.Button(self.post_action_frame, text="Save .txt", command=self.save_to_file, width=15)
+        self.copy_button = tk.Button(self.post_action_frame, text="Copy to Clipboard", command=self.copy_to_clipboard, width=15)
+        self.reset_button = tk.Button(self.post_action_frame, text="Scan Another", command=self.reset_ui, width=15)
+        
+        self.save_button.pack(side=tk.LEFT, padx=5)
+        self.copy_button.pack(side=tk.LEFT, padx=5)
+        self.reset_button.pack(side=tk.LEFT, padx=5)
+
+        # Status Bar
+        self.status_var = tk.StringVar()
+        self.status_var.set("Ready.")
+        self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def select_folder(self):
-        folder_selected = filedialog.askdirectory(initialdir=os.getcwd())
-        if folder_selected:
-            self.project_path.set(folder_selected)
+        path = filedialog.askdirectory()
+        if path:
+            self.project_path.set(path)
             self.validate_path_entry()
 
     def validate_path_entry(self, event=None):
         path = self.project_path.get()
         if path and os.path.isdir(path):
-            self.start_button.config(state='normal')
-            self.status_label.config(text=f"Valid path: {path}")
+            self.start_button.config(state='normal', bg="#4CAF50", fg="white")
+            self.status_var.set("Valid path selected.")
         else:
-            self.start_button.config(state='disabled')
-            self.status_label.config(text="Please enter a valid directory path.")
+            self.start_button.config(state='disabled', bg="#e1e1e1", fg="black")
+            self.status_var.set("Please select a valid directory.")
 
     def process_project(self):
         path = self.project_path.get()
-        if not path or not os.path.isdir(path):
-            messagebox.showwarning("Invalid Path", "Please select a valid directory.")
-            return
-        self.toggle_controls(active=False)
+        if not path or not os.path.isdir(path): return
+        
+        # UI State: Busy
+        self.path_entry.config(state='disabled')
+        self.browse_button.config(state='disabled')
+        self.start_button.pack_forget()
         self.master.update()
-        try:
-            self.summary_text = generate_project_summary(path, self.update_status)
-            if self.summary_text:
-                self.setup_post_generation_ui(path)
-                self.update_status(f"Summary generated successfully. {self.summary_stats} Choose an action.")
-            else:
-                self.reset_ui()
-        except Exception as e:
-            messagebox.showerror("Unexpected Error", f"An unexpected error occurred: {e}")
+
+        # Run Scan
+        self.summary_text = generate_project_summary(path, self.update_status)
+
+        if self.summary_text:
+            self.show_results()
+        else:
             self.reset_ui()
 
-    def setup_post_generation_ui(self, project_path):
-        self.start_button.pack_forget()
-        self.browse_button.config(state='disabled')
-        self.path_entry.config(state='readonly')
-        self.save_button.pack(side=tk.LEFT, padx=5)
-        self.copy_button.pack(side=tk.LEFT, padx=5)
-        self.reset_button.pack(side=tk.BOTTOM, pady=10)
-        project_name = os.path.basename(project_path.rstrip('/\\'))
-        output_filename = f"{project_name}_summary.txt"
-        if getattr(sys, 'frozen', False):
-            base_dir = os.path.dirname(sys.executable)
-            output_dir = os.path.join(base_dir, 'project-prompts')
-            os.makedirs(output_dir, exist_ok=True)
-        else:
+    def update_status(self, msg):
+        self.status_var.set(msg)
+        self.master.update()
+
+    def show_results(self):
+        stats = f"{len(self.summary_text.splitlines())} lines, {len(self.summary_text)} chars"
+        self.status_var.set(f"Done! {stats}")
+        self.post_action_frame.pack(pady=10)
+
+    def save_to_file(self):
+        if not self.summary_text: return
+        project_name = os.path.basename(self.project_path.get().rstrip(os.sep))
+        default_name = f"{project_name}_prompt_context.txt"
+        
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            initialfile=default_name,
+            filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")]
+        )
+        
+        if file_path:
             try:
-                # __file__ is not defined in all contexts (e.g. some interactive interpreters)
-                script_path = os.path.abspath(__file__)
-                output_dir = os.path.dirname(script_path)
-            except NameError:
-                 output_dir = os.getcwd() # Fallback to current working directory
-        self.output_path = os.path.join(output_dir, output_filename)
-        self.summary_stats = f"({len(self.summary_text.splitlines())} lines, {len(self.summary_text)} chars)"
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(self.summary_text)
+                messagebox.showinfo("Success", f"Saved to:\n{file_path}")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
 
-
-    def save_summary_to_file(self):
-        if not self.summary_text or not self.output_path:
-            messagebox.showerror("Error", "No summary content to save.")
-            return
-        try:
-            with open(self.output_path, 'w', encoding='utf-8') as f:
-                f.write(self.summary_text)
-            messagebox.showinfo("Success", f"Project summary saved!\n\nLocation:\n{self.output_path}")
-            self.update_status(f"Project summary saved! {self.summary_stats}")
-
-        except Exception as e:
-            messagebox.showerror("Save Error", f"Could not write to file: {e}")
-
-    def copy_summary_to_clipboard(self):
-        if not self.summary_text:
-            messagebox.showerror("Error", "No summary content to copy.")
-            return
+    def copy_to_clipboard(self):
+        if not self.summary_text: return
         self.master.clipboard_clear()
         self.master.clipboard_append(self.summary_text)
-        self.update_status(f"Summary copied to clipboard! {self.summary_stats}")
-        messagebox.showinfo("Copied!", "The project summary has been copied to your clipboard.")
+        messagebox.showinfo("Copied", "Content copied to clipboard!")
 
     def reset_ui(self):
         self.summary_text = None
-        self.summary_stats = ""
-        self.output_path = None
+        self.post_action_frame.pack_forget()
+        self.path_entry.config(state='normal')
+        self.browse_button.config(state='normal')
         self.project_path.set("")
-        self.toggle_controls(active=True)
-        self.start_button.config(state='disabled')
-        self.save_button.pack_forget()
-        self.copy_button.pack_forget()
-        self.reset_button.pack_forget()
-        self.start_button.pack()
-        self.update_status("Ready. Using final filtering logic.")
+        self.start_button.pack(pady=5, ipadx=10, ipady=5)
+        self.validate_path_entry()
 
-    def toggle_controls(self, active):
-        state = 'normal' if active else 'disabled'
-        self.path_entry.config(state='normal' if active else 'readonly')
-        self.browse_button.config(state=state)
-        self.start_button.config(state=state if self.project_path.get() else 'disabled')
-        if not active:
-             self.start_button.config(state='disabled')
+def resource_path(relative_path):
+    """ PyInstaller ile paketlenince dosya yolunu bulmak için gerekli fonksiyon """
+    try:
+        # PyInstaller temp klasörü yaratır ve yolu _MEIPASS içine atar
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
 
-    def update_status(self, message):
-        self.status_label.config(text=message)
-        self.master.update_idletasks()
+    return os.path.join(base_path, relative_path)
 
 if __name__ == "__main__":
     root = tk.Tk()
-    if getattr(sys, 'frozen', False):
-        base_path = sys._MEIPASS
-    else:
-        base_path = os.path.abspath(".")
-    icon_path = os.path.join(base_path, 'fav.ico')
-    root.iconbitmap(icon_path)
+    
+    # İkon dosyasının yolunu güvenli şekilde al
+    icon_file = resource_path("fav.ico")
+    
+    # Eğer dosya varsa ikonu ayarla
+    if os.path.exists(icon_file):
+        try:
+            root.iconbitmap(icon_file)
+        except Exception:
+            pass # İkon yüklenemezse program çökmesin, devam etsin
 
     app = ProjectScannerApp(root)
     root.mainloop()
