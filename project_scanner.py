@@ -331,7 +331,16 @@ class ProjectScannerApp:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def select_folder(self):
-        path = filedialog.askdirectory()
+        # Eger EXE olarak calisiyorsa EXE'nin oldugu klasoru, 
+        # kod olarak calisiyorsa projenin oldugu klasoru baz al.
+        if getattr(sys, 'frozen', False):
+            start_dir = os.path.dirname(sys.executable)
+        else:
+            start_dir = os.path.abspath(".")
+
+        # initialdir parametresi ile baslangic klasorunu belirle
+        path = filedialog.askdirectory(initialdir=start_dir)
+        
         if path:
             self.project_path.set(path)
             self.validate_path_entry()
