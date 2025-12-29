@@ -10,7 +10,7 @@
     "logs", ".log", "tmp", "temp",
     "lib", "libs", "vendor", "deploy", "wheels",
     "android", "ios", ".gradle",
-    "pkg", "bundle"
+    "pkg", "bundle", "auth_info_baileys"
   ],
   "ignore_filenames": [
     ".gitignore", ".gitattributes", ".dockerignore", ".editorconfig",
@@ -28,7 +28,7 @@
     ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
     ".db", ".sqlite", ".sqlite3", ".mdb", ".accdb",
     ".min.js", ".min.css", ".map",
-    ".log", ".bak", ".tmp", ".swp", ".swo"
+    ".log", ".bak", ".tmp", ".swp", ".swo", ".spec"
   ],
   "ignore_patterns": [
     ".min.",
